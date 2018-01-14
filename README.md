@@ -267,3 +267,137 @@ Control Payload
 
 https://lh6.googleusercontent.com/uqa5naM-1xqxeSptLCZ-EDO7kB-n_4rE6Y7g1XpIClHEg0vQJVboHtbolLmXywKHUopv5-LICBp4hDtGv8XDSg8q2DtxelJotdp6j5U-XtSXJ_Z76nyoYm8dz-KB7qbfu6zy78p9
 
+Packet structure
+
+Number of Routers: Number of routers in the network
+Updates Periodic Interval: Time (in seconds) to be used between two successive routing update packet broadcast
+Router(x) ID: <ID> of the xth router
+Router(x) Port-1: <router port> of the xth router
+Router(x) Port-2: <data port> of the xth router
+Cost(x): <cost> of the link to the xth router
+Router(x) IP Address:  <IP address> of the xth router
+
+ROUTING-TABLE [Control Code: 0x02]
+The controller uses this to request the current routing/forwarding table from a given router. The table sent as a response should contain an entry for each router in the network (including self) consisting of the next hop router ID (on the least cost path to that router) and the cost of the path to it.
+
+
+Control-Response Payload
+
+https://lh6.googleusercontent.com/imu6eCqL5tq7XorYVQysc2cCrYWex6m4bD_2YBNtLequtASNO-XFAlSWD54Yh0CT9JhrxdqKTlzPPldtf4liTK9lfgOs9AeHJ__fv69B1K8F7wEdCwXf-pFDVcN_BAq2QZnEru_k
+
+Packet structure
+
+Router(x) ID: <ID> of the xth router
+Router(x) Next-Hop ID: <ID> of the next-hop router in the shortest path to the xth router
+Cost(x): <cost> of the path to the xth router
+
+Notes
+
+The number of entries should be equal to the number (n) of routers mentioned in the INIT control message
+One of the entries should be to self with a cost of 0 and next hop the router itself.
+If the cost of path to a router is INF (infinity), the next hop router ID would also be INF in such a case
+
+If you do not implement the ROUTING-TABLE response correctly, most automated tests will fail.
+
+
+UPDATE [Control Code: 0x03]
+The controller uses this to change/update the link cost between between the router receiving this message and a neighboring router. Since in our network, links are symmetric, this control message will always be sent in pairs to both the routers involved in a link. Note that if the cost of a link changes to INF via the UPDATE command, the two neighbors should still send periodic routing updates to each other and they should not assume that the link has broken (in fact, the cost might change later to another value via another UPDATE command). This is in contrast to the case in 6.1 when a router discovers that a neighbor is down (after missing three routing updates from that neighbor); in that case, the router also stops sending updates to its neighbor.
+
+
+Control Payload
+
+https://lh6.googleusercontent.com/CoN7ZeHYCUbmhgDWAX5ILkLifyrUUUWcXVcXcEz28Nj2B9KS7nYHTN7s2M27reB0WCB7y9kgiO-EBjvBmyBmu_Uc9OU_lf-F9VhM2Yt69W2Y11l20nS6GnAbAAmqJjlCPOUXAC-S
+
+Packet structure
+
+Router ID: <ID> of the router to which the link cost is to be updated
+Cost: New link <cost> to the router
+
+CRASH [Control Code: 0x04]
+The controller uses this to simulate a crash (unexpected failure) on a router. On receiving this message, the router should exit immediately. Note that you should not send messages to any routers in the network regarding the crash. They will discover this and update their routing tables, in due time, on their own. Note that in this case you have to send the response message before exiting. Once a router exits, it will not be respawned.
+
+
+SENDFILE [Control Code: 0x05]
+The controller uses this to initiate a file transfer from the router receiving this message to any other router in the network. See section 7 for details on how to packetize and route the packets.
+
+The file to be sent will reside in the same folder as the binary executable of the router application. The receiving router should store the file in the same folder as the executable, with the name file-<Transfer ID>. Your implementation should be able to transfer both text and binary files. You can assume the maximum file size to be 10 MiB. In this case, you have to send the response message after the packet with the FIN bit set (last packet) has been sent to the next hop.
+
+
+Control Payload
+
+https://lh4.googleusercontent.com/sOjrmnNZ29MrB_9CLKfA5tyTxRrOelNm279DVygfRqsSpxdc-dN6leMngDVnYWDNdlvXfqUcIWQqc67WFBWKUYjgJ0NJOgl7cW1g3stJmrdj_6AwNBd9FcJ3L_BMwlHWKhZPea8o
+
+Packet structure
+
+Destination Router IP Address: <IP address> of the router to which the file is to be sent
+Init. TTL: Initial TTL value to be used in data packets (see section 7)
+Transfer ID: Unique number identifying the transfer/flow
+Init. Seq. Number: Initial Sequence number to used in data packets (see section 7)
+Filename: Name of the file (ASCII encoded) to be sent
+
+SENDFILE-STATS [Control Code: 0x06]
+The controller uses this to get statistics from the routers involved in a file transfer about the routed data packets. To be able to respond correctly to this control message, each router should store the TTL and Sequence number of each data packet that it sends/routes. These statistics need to be maintained per Transfer ID, on all routers including the source and destination router involved in a transfer.
+
+Unless you are attempting BONUS, there will be only one active data transfer/flow at any given time, in the network.
+
+
+Control Payload
+
+https://lh5.googleusercontent.com/vw5B_Nf-jG0_Dt5ELm12PrDhAkp424FDG5XSZnktbWz9wOF1gMJ3eDP7TJX7ww7hyZnigiGVcDbbUvkMXdjd1vv-ji4Ps6iuK024GTzQ6Wk7cmyZ5kPPr8B0nAPUhzQBqyyFnqx0
+
+Packet structure
+
+Transfer ID: <ID> of the transfer/flow for which the statistics are requested
+
+Control-Response Payload
+
+https://lh3.googleusercontent.com/f0v_H3xMiUo3WEisIWFIgsmoXO2Tmw8WyDH2rjaYwb31qpQPPPTulu1Bgln0dVUFhqa4I8kewypTgQVNl3MXxuRDCdWT4E35bCoOPSWl4uZBipPWNopRrr02nPv5l2iqHNeiTSLW
+
+Packet structure
+
+Transfer ID: <ID> of the flow for which the statistics are provided
+TTL: TTL value of routed packets after the decrement operation (see section 7)
+Seq. Number(x): Sequence Number of the xth packet routed/sent
+
+LAST-DATA-PACKET [Control Code: 0x07]
+The controller uses this to get a copy of the last data packet that was sent/routed/received through the router. As a response to this control message, the router will put the last sent/routed/received packet as payload inside the control-response packet and send it to the controller over the control channel (connection established involving the control port). Note that in order to respond to this control message correctly, each router will always keep a copy of the last packet that it sends/routes which can then be sent to the controller when requested.
+
+
+PENULTIMATE-DATA-PACKET [Control Code: 0x08]
+The controller uses this to get a copy of the second last data packet that was sent/routed/received through the router. As a response to this control message, the router will put the second last sent/routed/received packet as payload inside the control-response packet and send it to the controller over the control channel (connection established involving the control port). Note that in order to respond to this control message correctly, each router will always keep a copy of the second last packet that it sends/routes which can then be sent to the controller when requested.
+
+#  Data Plane
+
+In a typical deployed network, routers will never generate data packets of their own but only route packets generated by end-hosts. However, for this assignment, routers can indeed generate data packets (on receipt of SENDFILE control message), in addition to routing them.
+
+On receiving the SENDFILE control message, the sending (source) router will need to read the file from the disk and packetize it using the packet format described in section 7.1. The destination (sink) router will need to reconstruct the file back from the received data packets and write it to disk.
+
+The SENDFILE control message along with the <Filename> of the file to be transferred, specifies a TTL and an initial sequence number value <seq>. The source router will put the TTL value in each packet generated. The first packet for a given transfer will have sequence number <seq>, the second one <seq>+1 and so on.
+
+All data plane packets will be sent over TCP connections on the <data port> specified in the INIT control message. The routing procedure consists of decrementing the TTL value (by 1) of the data packet received, looking up the next hop router for the destination mentioned in the packet in the forwarding table and forwarding it. The same procedure is repeated at each router, until the packet reaches its destination (the sink router). If a packet’s TTL reaches 0 after the decrement operation, it should be dropped and not routed further.
+
+Other than the TTL, a router should not modify any other fields in the packet in any way.
+
+
+Notes
+
+The source router should NOT decrement the TTL
+The destination router should decrement the TTL and drop the packet if the TTL reaches 0
+LAST-DATA-PACKET and PENULTIMATE-DATA-PACKET refer to packets with TTL>0
+
+
+>> Data Packet Format
+
+https://lh3.googleusercontent.com/Vlyw_idfA0fQDoyxlO46o734xIXaF-VykVOJa4xIJ6WtKup1IXL10ujdBbrfO4P6EbM_RA5vFKsqZiHtlnGPWwuin9rOZFFsYncijGesFx90xPf5tLKy6kHuMo0GFuJ6cQtD3UPS
+
+Packet structure
+
+Destination Router IP Address: <IP address> of the router to which the packet is destined
+Transfer ID: Unique number identifying the transfer/flow
+TTL: TTL value
+FIN: This bit is set (1) for the last data packet of a given transfer/flow/file sent from the source, unset (0) otherwise
+Sequence Number: Sequence number
+
+Notes
+
+File sizes used will always be a multiple of 1024 bytes
